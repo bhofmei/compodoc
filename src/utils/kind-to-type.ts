@@ -1,4 +1,4 @@
-import { ts, SyntaxKind } from 'ts-simple-ast';
+import { SyntaxKind } from 'ts-simple-ast';
 
 export function kindToType(kind: number): string {
     let _type = '';
@@ -32,6 +32,9 @@ export function kindToType(kind: number): string {
             break;
         case SyntaxKind.NullKeyword:
             _type = 'null';
+            break;
+        case SyntaxKind.SymbolKeyword:
+            _type = 'symbol';
             break;
         case SyntaxKind.NeverKeyword:
             _type = 'never';

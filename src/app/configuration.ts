@@ -1,8 +1,11 @@
-import { COMPODOC_DEFAULTS } from '../utils/defaults';
-import { PageInterface } from './interfaces/page.interface';
-import { MainDataInterface } from './interfaces/main-data.interface';
-import { ConfigurationInterface } from './interfaces/configuration.interface';
 import * as _ from 'lodash';
+
+import { COMPODOC_DEFAULTS } from '../utils/defaults';
+
+import { ConfigurationInterface } from './interfaces/configuration.interface';
+import { CoverageData } from './interfaces/coverageData.interface';
+import { MainDataInterface } from './interfaces/main-data.interface';
+import { PageInterface } from './interfaces/page.interface';
 
 export class Configuration implements ConfigurationInterface {
     private _pages: PageInterface[] = [];
@@ -18,6 +21,7 @@ export class Configuration implements ConfigurationInterface {
         documentationMainDescription: '',
         base: COMPODOC_DEFAULTS.base,
         hideGenerator: false,
+        hasFilesToCoverage: false,
         modules: [],
         readme: false,
         changelog: '',
@@ -30,6 +34,7 @@ export class Configuration implements ConfigurationInterface {
         classes: [],
         interfaces: [],
         components: [],
+        controllers: [],
         directives: [],
         injectables: [],
         interceptors: [],
@@ -39,12 +44,14 @@ export class Configuration implements ConfigurationInterface {
         tsconfig: '',
         toggleMenuItems: [],
         navTabConfig: [],
+        templates: '',
         includes: '',
         includesName: COMPODOC_DEFAULTS.additionalEntryName,
         includesFolder: COMPODOC_DEFAULTS.additionalEntryPath,
         disableSourceCode: COMPODOC_DEFAULTS.disableSourceCode,
         disableDomTree: COMPODOC_DEFAULTS.disableDomTree,
         disableTemplateTab: COMPODOC_DEFAULTS.disableTemplateTab,
+        disableStyleTab: COMPODOC_DEFAULTS.disableStyleTab,
         disableGraph: COMPODOC_DEFAULTS.disableGraph,
         disableMainGraph: COMPODOC_DEFAULTS.disableMainGraph,
         disableCoverage: COMPODOC_DEFAULTS.disableCoverage,
@@ -53,6 +60,7 @@ export class Configuration implements ConfigurationInterface {
         disableProtected: COMPODOC_DEFAULTS.disableProtected,
         disableLifeCycleHooks: COMPODOC_DEFAULTS.disableLifeCycleHooks,
         disableRoutesGraph: COMPODOC_DEFAULTS.disableRoutesGraph,
+        disableSearch: false,
         watch: false,
         mainGraph: '',
         coverageTest: false,
@@ -60,20 +68,32 @@ export class Configuration implements ConfigurationInterface {
         coverageTestThresholdFail: COMPODOC_DEFAULTS.coverageTestThresholdFail,
         coverageTestPerFile: false,
         coverageMinimumPerFile: COMPODOC_DEFAULTS.defaultCoverageMinimumPerFile,
-				unitTestCoverage: '',
-				unitTestData: undefined,
+        unitTestCoverage: '',
+        unitTestData: undefined,
+        coverageTestShowOnlyFailed: COMPODOC_DEFAULTS.coverageTestShowOnlyFailed,
         routesLength: 0,
         angularVersion: '',
         exportFormat: COMPODOC_DEFAULTS.exportFormat,
-        coverageData: {},
+        coverageData: {} as CoverageData,
         customFavicon: '',
+        customLogo: '',
         packageDependencies: [],
         packagePeerDependencies: [],
         gaID: '',
         gaSite: '',
         angularProject: false,
-        angularJSProject: false
+        angularJSProject: false,
+        language: COMPODOC_DEFAULTS.language
     };
+
+    private static instance: Configuration;
+    private constructor() {}
+    public static getInstance() {
+        if (!Configuration.instance) {
+            Configuration.instance = new Configuration();
+        }
+        return Configuration.instance;
+    }
 
     public addPage(page: PageInterface) {
         let indexPage = _.findIndex(this._pages, { name: page.name });
@@ -89,6 +109,10 @@ export class Configuration implements ConfigurationInterface {
 
     public addAdditionalPage(page: PageInterface) {
         this._mainData.additionalPages.push(page);
+    }
+
+    public getAdditionalPageById(id): PageInterface {
+        return this._mainData.additionalPages.find(page => page.id === id);
     }
 
     public resetPages() {
@@ -120,6 +144,10 @@ export class Configuration implements ConfigurationInterface {
         this._pages = [];
     }
 
+    get markDownPages() {
+        return this._pages.filter(page => page.markdown);
+    }
+
     get mainData(): MainDataInterface {
         return this._mainData;
     }
@@ -127,3 +155,5 @@ export class Configuration implements ConfigurationInterface {
         (Object as any).assign(this._mainData, data);
     }
 }
+
+export default Configuration.getInstance();

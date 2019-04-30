@@ -1,33 +1,20 @@
-import Ast, { ts, TypeGuards, SyntaxKind } from 'ts-simple-ast';
+import { ts } from 'ts-simple-ast';
 
 import { ClassHelper } from './angular/deps/helpers/class-helper';
 import { ComponentHelper } from './angular/deps/helpers/component-helper';
 
-import { ExtendsMerger } from '../../utils/extends-merger.util';
-import { ConfigurationInterface } from '../interfaces/configuration.interface';
-import { RouterParserUtil } from '../../utils';
-import { compilerHost } from '../../utilities';
+import { compilerHost } from '../../utils';
 
 export class FrameworkDependencies {
-
     private files: string[];
     private program: ts.Program;
     private typeChecker: ts.TypeChecker;
     private classHelper: ClassHelper;
-    private componentHelper: ComponentHelper;
-    private extendsMerger: ExtendsMerger;
-    public configuration: ConfigurationInterface;
-    private routerParser;
+    public componentHelper: ComponentHelper;
+    public routerParser;
 
-    constructor(
-        files: string[],
-        options: any,
-        configuration: ConfigurationInterface,
-        routerParser: RouterParserUtil
-    ) {
+    constructor(files: string[], options: any) {
         this.files = files;
-        this.configuration = configuration;
-        this.routerParser = routerParser;
 
         const transpileOptions = {
             target: ts.ScriptTarget.ES5,
@@ -41,8 +28,7 @@ export class FrameworkDependencies {
             compilerHost(transpileOptions)
         );
         this.typeChecker = this.program.getTypeChecker();
-        this.classHelper = new ClassHelper(this.typeChecker, this.configuration);
+        this.classHelper = new ClassHelper(this.typeChecker);
         this.componentHelper = new ComponentHelper(this.classHelper);
-        this.extendsMerger = new ExtendsMerger();
     }
 }

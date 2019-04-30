@@ -1,10 +1,11 @@
-import * as path from 'path';
 import * as Handlebars from 'handlebars';
-import { logger } from '../../logger';
-import { Configuration } from '../configuration';
-import { ConfigurationInterface } from '../interfaces/configuration.interface';
-import { FileEngine } from './file.engine';
-import { MAX_SIZE_FILE_SEARCH_INDEX, MAX_SIZE_FILE_CHEERIO_PARSING } from '../../utils/constants';
+import * as path from 'path';
+
+import { MAX_SIZE_FILE_CHEERIO_PARSING, MAX_SIZE_FILE_SEARCH_INDEX } from '../../utils/constants';
+
+import { logger } from '../../utils/logger';
+import Configuration from '../configuration';
+import FileEngine from './file.engine';
 
 const lunr: any = require('lunr');
 const cheerio: any = require('cheerio');
@@ -18,10 +19,14 @@ export class SearchEngine {
     public indexSize: number;
     public amountOfMemory = 0;
 
-    constructor(
-        private configuration: ConfigurationInterface,
-        private fileEngine: FileEngine = new FileEngine()
-    ) {}
+    private static instance: SearchEngine;
+    private constructor() {}
+    public static getInstance() {
+        if (!SearchEngine.instance) {
+            SearchEngine.instance = new SearchEngine();
+        }
+        return SearchEngine.instance;
+    }
 
     public indexPage(page) {
         let text;
@@ -36,7 +41,7 @@ export class SearchEngine {
             text = Html.decode(text);
             text = text.replace(/(<([^>]+)>)/gi, '');
 
-            page.url = page.url.replace(this.configuration.mainData.output, '');
+            page.url = page.url.replace(Configuration.mainData.output, '');
 
             let doc = {
                 url: page.url,
@@ -61,6 +66,7 @@ export class SearchEngine {
             this.ref('url');
             this.field('title');
             this.field('body');
+            this.pipeline.remove(lunr.stemmer);
 
             let i = 0;
             let len = that.searchDocuments.length;
@@ -68,7 +74,7 @@ export class SearchEngine {
                 this.add(that.searchDocuments[i]);
             }
         });
-        return this.fileEngine.get(__dirname + '/../src/templates/partials/search-index.hbs').then(
+        return FileEngine.get(__dirname + '/../src/templates/partials/search-index.hbs').then(
             data => {
                 let template: any = Handlebars.compile(data);
                 let result = template({
@@ -80,14 +86,17 @@ export class SearchEngine {
                     outputFolder = outputFolder.replace(process.cwd() + path.sep, '');
                 }
 
-                return this.fileEngine
-                    .write(outputFolder + path.sep + '/js/search/search_index.js', result)
-                    .catch(err => {
-                        logger.error('Error during search index file generation ', err);
-                        return Promise.reject(err);
-                    });
+                return FileEngine.write(
+                    outputFolder + path.sep + '/js/search/search_index.js',
+                    result
+                ).catch(err => {
+                    logger.error('Error during search index file generation ', err);
+                    return Promise.reject(err);
+                });
             },
             err => Promise.reject('Error during search index generation')
         );
     }
 }
+
+export default SearchEngine.getInstance();

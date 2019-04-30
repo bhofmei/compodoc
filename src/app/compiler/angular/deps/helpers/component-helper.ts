@@ -1,8 +1,7 @@
 import { ts } from 'ts-simple-ast';
-import { SymbolHelper, IParseDeepIdentifierResult } from './symbol-helper';
-import { detectIndent } from '../../../../../utilities';
-import { IDep, Deps } from '../../dependencies.interfaces';
+import { detectIndent } from '../../../../../utils';
 import { ClassHelper } from './class-helper';
+import { IParseDeepIdentifierResult, SymbolHelper } from './symbol-helper';
 
 export class ComponentHelper {
     constructor(
@@ -51,6 +50,13 @@ export class ComponentHelper {
         return this.getSymbolDepsObject(props, 'host');
     }
 
+    public getComponentTag(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string {
+        return this.symbolHelper.getSymbolDeps(props, 'tag', srcFile).pop();
+    }
+
     public getComponentInputsMetadata(
         props: ReadonlyArray<ts.ObjectLiteralElementLike>,
         srcFile: ts.SourceFile
@@ -75,7 +81,42 @@ export class ComponentHelper {
         props: ReadonlyArray<ts.ObjectLiteralElementLike>,
         srcFile: ts.SourceFile
     ): string[] {
-        return this.sanitizeUrls(this.symbolHelper.getSymbolDeps(props, 'styleUrls', srcFile));
+        return this.symbolHelper.getSymbolDeps(props, 'styleUrls', srcFile);
+    }
+
+    public getComponentStyleUrl(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string {
+        return this.symbolHelper.getSymbolDeps(props, 'styleUrl', srcFile).pop();
+    }
+
+    public getComponentShadow(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string {
+        return this.symbolHelper.getSymbolDeps(props, 'shadow', srcFile).pop();
+    }
+
+    public getComponentScoped(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string {
+        return this.symbolHelper.getSymbolDeps(props, 'scoped', srcFile).pop();
+    }
+
+    public getComponentAssetsDir(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string {
+        return this.symbolHelper.getSymbolDeps(props, 'assetsDir', srcFile).pop();
+    }
+
+    public getComponentAssetsDirs(
+        props: ReadonlyArray<ts.ObjectLiteralElementLike>,
+        srcFile: ts.SourceFile
+    ): string[] {
+        return this.sanitizeUrls(this.symbolHelper.getSymbolDeps(props, 'assetsDir', srcFile));
     }
 
     public getComponentStyles(
@@ -171,8 +212,16 @@ export class ComponentHelper {
         type: string,
         multiLine?: boolean
     ): Map<string, string> {
-        let deps = props.filter(node => node.name.text === type);
-        return deps.map(x => this.parseProperties(x)).pop();
+        let i = 0,
+            len = props.length,
+            filteredProps = [];
+
+        for (i; i < len; i++) {
+            if (props[i].name && props[i].name.text === type) {
+                filteredProps.push(props[i]);
+            }
+        }
+        return filteredProps.map(x => this.parseProperties(x)).pop();
     }
 
     public getComponentIO(

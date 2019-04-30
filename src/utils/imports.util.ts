@@ -1,10 +1,18 @@
 import * as path from 'path';
 
-import Ast, { PropertyDeclaration, ts, SyntaxKind } from 'ts-simple-ast';
+import Ast, { ts, PropertyDeclaration, SyntaxKind } from 'ts-simple-ast';
 
 const ast = new Ast();
 
 export class ImportsUtil {
+    private static instance: ImportsUtil;
+    private constructor() {}
+    public static getInstance() {
+        if (!ImportsUtil.instance) {
+            ImportsUtil.instance = new ImportsUtil();
+        }
+        return ImportsUtil.instance;
+    }
     /**
      * Find for a sourceFile a variable value in a local enum
      * @param srcFile
@@ -141,10 +149,7 @@ export class ImportsUtil {
                 let initializer = variableDeclaration.getInitializer();
                 if (initializer) {
                     let initializerKind = initializer.getKind();
-                    if (
-                        initializerKind &&
-                        initializerKind === SyntaxKind.ObjectLiteralExpression
-                    ) {
+                    if (initializerKind && initializerKind === SyntaxKind.ObjectLiteralExpression) {
                         let compilerNode = initializer.compilerNode as ts.ObjectLiteralExpression;
                         return compilerNode.properties;
                     }
@@ -175,19 +180,25 @@ export class ImportsUtil {
                         if (exportDeclarations && exportDeclarations.length > 0) {
                             let i = 0,
                                 len = exportDeclarations.length;
-                            for (i; i<len; i++) {
+                            for (i; i < len; i++) {
                                 let exportDeclaration = exportDeclarations[i];
                                 let sourceFileExportedReference = exportDeclaration.getModuleSpecifierSourceFile();
                                 if (sourceFileExportedReference) {
                                     let sourceFileExportedReferencePath = sourceFileExportedReference.getFilePath();
 
                                     const sourceFileExported =
-                                        typeof ast.getSourceFile(sourceFileExportedReferencePath) !== 'undefined'
+                                        typeof ast.getSourceFile(
+                                            sourceFileExportedReferencePath
+                                        ) !== 'undefined'
                                             ? ast.getSourceFile(sourceFileExportedReferencePath)
-                                            : ast.addExistingSourceFileIfExists(sourceFileExportedReferencePath);
+                                            : ast.addExistingSourceFileIfExists(
+                                                  sourceFileExportedReferencePath
+                                              );
 
                                     if (sourceFileExported) {
-                                        variableDeclaration = sourceFileExported.getVariableDeclaration(variableName);
+                                        variableDeclaration = sourceFileExported.getVariableDeclaration(
+                                            variableName
+                                        );
                                         if (variableDeclaration) {
                                             return hasFoundValues(variableDeclaration);
                                         }
@@ -427,3 +438,5 @@ export class ImportsUtil {
         }
     }
 }
+
+export default ImportsUtil.getInstance();

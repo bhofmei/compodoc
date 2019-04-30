@@ -1,9 +1,8 @@
 import * as fs from 'fs-extra';
-import * as path from 'path';
 import * as _ from 'lodash';
-import { FileEngine } from './file.engine';
+import * as path from 'path';
 
-const marked = require('marked');
+import FileEngine from './file.engine';
 
 export class MarkdownEngine {
     /**
@@ -11,8 +10,11 @@ export class MarkdownEngine {
      */
     private readonly markdownFiles = ['README', 'CHANGELOG', 'LICENSE', 'CONTRIBUTING', 'TODO'];
 
-    constructor(private fileEngine = new FileEngine()) {
-        const renderer = new marked.Renderer();
+    private markedInstance = require('marked');
+
+    private static instance: MarkdownEngine;
+    private constructor() {
+        const renderer = new this.markedInstance.Renderer();
         renderer.code = (code, language) => {
             let highlighted = code;
             if (!language) {
@@ -36,7 +38,6 @@ export class MarkdownEngine {
             );
         };
 
-        let self = this;
         renderer.image = function(href: string, title: string, text: string) {
             let out = '<img src="' + href + '" alt="' + text + '" class="img-responsive"';
             if (title) {
@@ -46,27 +47,33 @@ export class MarkdownEngine {
             return out;
         };
 
-        marked.setOptions({
+        this.markedInstance.setOptions({
             renderer: renderer,
+            gfm: true,
             breaks: false
         });
     }
+    public static getInstance() {
+        if (!MarkdownEngine.instance) {
+            MarkdownEngine.instance = new MarkdownEngine();
+        }
+        return MarkdownEngine.instance;
+    }
 
     public getTraditionalMarkdown(filepath: string): Promise<string> {
-        return this.fileEngine
-            .get(process.cwd() + path.sep + filepath + '.md')
-            .catch(err => this.fileEngine.get(process.cwd() + path.sep + filepath).then())
-            .then(data => marked(data));
+        return FileEngine.get(process.cwd() + path.sep + filepath + '.md')
+            .catch(err => FileEngine.get(process.cwd() + path.sep + filepath).then())
+            .then(data => this.markedInstance(data));
     }
 
     public getTraditionalMarkdownSync(filepath: string): string {
-        return marked(this.fileEngine.getSync(process.cwd() + path.sep + filepath));
+        return this.markedInstance(FileEngine.getSync(process.cwd() + path.sep + filepath));
     }
 
     private getReadmeFile(): Promise<string> {
-        return this.fileEngine
-            .get(process.cwd() + path.sep + 'README.md')
-            .then(data => marked(data));
+        return FileEngine.get(process.cwd() + path.sep + 'README.md').then(data =>
+            this.markedInstance(data)
+        );
     }
 
     public readNeighbourReadmeFile(file: string): string {
@@ -78,7 +85,7 @@ export class MarkdownEngine {
     public hasNeighbourReadmeFile(file: string): boolean {
         let dirname = path.dirname(file);
         let readmeFile = dirname + path.sep + path.basename(file, '.ts') + '.md';
-        return this.fileEngine.existsSync(readmeFile);
+        return FileEngine.existsSync(readmeFile);
     }
 
     private componentReadmeFile(file: string): string {
@@ -86,7 +93,7 @@ export class MarkdownEngine {
         let readmeFile = dirname + path.sep + 'README.md';
         let readmeAlternativeFile = dirname + path.sep + path.basename(file, '.ts') + '.md';
         let finalPath = '';
-        if (this.fileEngine.existsSync(readmeFile)) {
+        if (FileEngine.existsSync(readmeFile)) {
             finalPath = readmeFile;
         } else {
             finalPath = readmeAlternativeFile;
@@ -99,15 +106,15 @@ export class MarkdownEngine {
      */
     public hasRootMarkdowns(): boolean {
         return this.addEndings(this.markdownFiles).some(x =>
-            this.fileEngine.existsSync(process.cwd() + path.sep + x)
+            FileEngine.existsSync(process.cwd() + path.sep + x)
         );
     }
 
     public listRootMarkdowns(): string[] {
         let foundFiles = this.markdownFiles.filter(
             x =>
-                this.fileEngine.existsSync(process.cwd() + path.sep + x + '.md') ||
-                this.fileEngine.existsSync(process.cwd() + path.sep + x)
+                FileEngine.existsSync(process.cwd() + path.sep + x + '.md') ||
+                FileEngine.existsSync(process.cwd() + path.sep + x)
         );
 
         return this.addEndings(foundFiles);
@@ -130,3 +137,5 @@ export class MarkdownEngine {
         return _.flatMap(files, x => [x, x + '.md']);
     }
 }
+
+export default MarkdownEngine.getInstance();

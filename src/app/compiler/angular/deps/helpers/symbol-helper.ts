@@ -4,17 +4,17 @@ import { ts, SyntaxKind } from 'ts-simple-ast';
 
 import { TsPrinterUtil } from '../../../../../utils/ts-printer.util';
 
-import { ImportsUtil } from '../../../../../utils/imports.util';
+import ImportsUtil from '../../../../../utils/imports.util';
 
 export class SymbolHelper {
     private readonly unknown = '???';
-    private importsUtil = new ImportsUtil();
 
     public parseDeepIndentifier(name: string, srcFile?: ts.SourceFile): IParseDeepIdentifierResult {
         let result = {
             name: '',
             type: ''
         };
+
         if (typeof name === 'undefined') {
             return result;
         }
@@ -28,7 +28,7 @@ export class SymbolHelper {
             return result;
         }
         if (typeof srcFile !== 'undefined') {
-            result.file = this.importsUtil.getFileNameOfImport(name, srcFile);
+            result.file = ImportsUtil.getFileNameOfImport(name, srcFile);
         }
         result.name = name;
         result.type = type;
@@ -41,6 +41,8 @@ export class SymbolHelper {
             type = 'component';
         } else if (name.toLowerCase().indexOf('pipe') !== -1) {
             type = 'pipe';
+        } else if (name.toLowerCase().indexOf('controller') !== -1) {
+            type = 'controller';
         } else if (name.toLowerCase().indexOf('module') !== -1) {
             type = 'module';
         } else if (name.toLowerCase().indexOf('directive') !== -1) {
@@ -188,7 +190,7 @@ export class SymbolHelper {
         let localNode = node;
 
         if (ts.isShorthandPropertyAssignment(localNode)) {
-            localNode = this.importsUtil.findValueInImportOrLocalVariables(node.name.text, srcFile);
+            localNode = ImportsUtil.findValueInImportOrLocalVariables(node.name.text, srcFile);
         }
 
         if (ts.isArrayLiteralExpression(localNode.initializer)) {
@@ -230,10 +232,17 @@ export class SymbolHelper {
             return [];
         }
 
-        let deps = props.filter(node => {
-            return node.name.text === type;
-        });
-        return deps.map(x => this.parseSymbols(x, srcFile)).pop() || [];
+        let i = 0,
+            len = props.length,
+            filteredProps = [];
+
+        for (i; i < len; i++) {
+            if (props[i].name && props[i].name.text === type) {
+                filteredProps.push(props[i]);
+            }
+        }
+
+        return filteredProps.map(x => this.parseSymbols(x, srcFile)).pop() || [];
     }
 
     public getSymbolDepsRaw(
@@ -248,5 +257,6 @@ export class SymbolHelper {
 export interface IParseDeepIdentifierResult {
     ns?: any;
     name: string;
+    file?: string;
     type: string | undefined;
 }

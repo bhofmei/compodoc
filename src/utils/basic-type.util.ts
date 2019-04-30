@@ -13,6 +13,14 @@ enum BasicTypeScriptTypes {
 }
 
 export class BasicTypeUtil {
+    private static instance: BasicTypeUtil;
+    private constructor() {}
+    public static getInstance() {
+        if (!BasicTypeUtil.instance) {
+            BasicTypeUtil.instance = new BasicTypeUtil();
+        }
+        return BasicTypeUtil.instance;
+    }
 
     /**
      * Checks if a given types is a basic javascript type
@@ -20,8 +28,8 @@ export class BasicTypeUtil {
      * @param type The type to check
      */
     public isJavascriptType(type: string): boolean {
-        if (typeof type !== 'undefined') {
-            return (type.toLowerCase() in BasicTypes);
+        if (typeof type !== 'undefined' && type.toLowerCase) {
+            return type.toLowerCase() in BasicTypes;
         } else {
             return false;
         }
@@ -33,8 +41,8 @@ export class BasicTypeUtil {
      * @param type The type to check
      */
     public isTypeScriptType(type: string): boolean {
-        if (typeof type !== 'undefined') {
-            return (type.toLowerCase() in BasicTypeScriptTypes);
+        if (typeof type !== 'undefined' && type.toLowerCase) {
+            return type.toLowerCase() in BasicTypeScriptTypes;
         } else {
             return false;
         }
@@ -65,3 +73,5 @@ export class BasicTypeUtil {
         return undefined;
     }
 }
+
+export default BasicTypeUtil.getInstance();

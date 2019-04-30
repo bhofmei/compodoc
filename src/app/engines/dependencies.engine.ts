@@ -1,26 +1,28 @@
 import * as _ from 'lodash';
 
-import { ParsedData } from '../interfaces/parsed-data.interface';
 import { MiscellaneousData } from '../interfaces/miscellaneous-data.interface';
-
-import { getNamesCompareFn } from '../../utils/utils';
-import { IModuleDep } from '../compiler/deps/module-dep.factory';
-import { IComponentDep } from '../compiler/deps/component-dep.factory';
-import { IDirectiveDep } from '../compiler/deps/directive-dep.factory';
-import { IApiSourceResult } from '../../utils/api-source-result.interface';
+import { ParsedData } from '../interfaces/parsed-data.interface';
 import { RouteInterface } from '../interfaces/routes.interface';
-import { AngularApiUtil } from '../../utils/angular-api.util';
+
+import AngularApiUtil from '../../utils/angular-api.util';
+import { IApiSourceResult } from '../../utils/api-source-result.interface';
+import { getNamesCompareFn } from '../../utils/utils';
+
 import {
+    IEnumDecDep,
+    IFunctionDecDep,
+    IGuardDep,
     IInjectableDep,
+    IInterceptorDep,
     IInterfaceDep,
     IPipeDep,
-    ITypeAliasDecDep,
-    IFunctionDecDep,
-    IEnumDecDep,
-    IInterceptorDep,
-    IGuardDep
-} from '../compiler/dependencies.interfaces';
-import { IGuardDep } from '../compiler/angular/dependencies.interfaces';
+    ITypeAliasDecDep
+} from '../compiler/angular/dependencies.interfaces';
+
+import { IComponentDep } from '../compiler/angular/deps/component-dep.factory';
+import { IControllerDep } from '../compiler/angular/deps/controller-dep.factory';
+import { IDirectiveDep } from '../compiler/angular/deps/directive-dep.factory';
+import { IModuleDep } from '../compiler/angular/deps/module-dep.factory';
 
 const traverse = require('traverse');
 
@@ -30,6 +32,7 @@ export class DependenciesEngine {
     public rawModules: Object[];
     public rawModulesForOverview: Object[];
     public components: Object[];
+    public controllers: Object[];
     public directives: Object[];
     public injectables: Object[];
     public interceptors: Object[];
@@ -38,56 +41,48 @@ export class DependenciesEngine {
     public routes: RouteInterface;
     public pipes: Object[];
     public classes: Object[];
-    public miscellaneous: MiscellaneousData;
+    public miscellaneous: MiscellaneousData = {
+        variables: [],
+        functions: [],
+        typealiases: [],
+        enumerations: [],
+        groupedVariables: [],
+        groupedFunctions: [],
+        groupedEnumerations: [],
+        groupedTypeAliases: []
+    };
 
-    private angularApiUtil: AngularApiUtil = new AngularApiUtil();
-
-    private cleanModules(modules) {
-        let _m = modules;
-        let i = 0;
-        let len = modules.length;
-
-        for (i; i < len; i++) {
-            let j = 0;
-            let leng = _m[i].declarations.length;
-            for (j; j < leng; j++) {
-                let k = 0;
-                let lengt;
-                if (_m[i].declarations[j].jsdoctags) {
-                    lengt = _m[i].declarations[j].jsdoctags.length;
-                    for (k; k < lengt; k++) {
-                        delete _m[i].declarations[j].jsdoctags[k].parent;
-                    }
-                }
-                if (_m[i].declarations[j].constructorObj) {
-                    if (_m[i].declarations[j].constructorObj.jsdoctags) {
-                        lengt = _m[i].declarations[j].constructorObj.jsdoctags.length;
-                        for (k; k < lengt; k++) {
-                            delete _m[i].declarations[j].constructorObj.jsdoctags[k].parent;
-                        }
-                    }
-                }
-            }
+    private static instance: DependenciesEngine;
+    private constructor() {}
+    public static getInstance() {
+        if (!DependenciesEngine.instance) {
+            DependenciesEngine.instance = new DependenciesEngine();
         }
-        return _m;
+        return DependenciesEngine.instance;
     }
 
     private updateModulesDeclarationsExportsTypes() {
-        let _m = this.modules,
-            i = 0,
-            len = this.modules.length;
-
         let mergeTypes = entry => {
-            let directive = this.findInCompodocDependencies(entry.name, this.directives, entry.file);
+            let directive = this.findInCompodocDependencies(
+                entry.name,
+                this.directives,
+                entry.file
+            );
             if (typeof directive.data !== 'undefined') {
                 entry.type = 'directive';
                 entry.id = directive.data.id;
             }
-            let component = this.findInCompodocDependencies(entry.name, this.components, entry.file);
+
+            let component = this.findInCompodocDependencies(
+                entry.name,
+                this.components,
+                entry.file
+            );
             if (typeof component.data !== 'undefined') {
                 entry.type = 'component';
                 entry.id = component.data.id;
             }
+
             let pipe = this.findInCompodocDependencies(entry.name, this.pipes, entry.file);
             if (typeof pipe.data !== 'undefined') {
                 entry.type = 'pipe';
@@ -111,22 +106,27 @@ export class DependenciesEngine {
     public init(data: ParsedData) {
         traverse(data).forEach(function(node) {
             if (node) {
-                if (node.parent) delete node.parent;
-                if (node.initializer) delete node.initializer;
+                if (node.parent) {
+                    delete node.parent;
+                }
+                if (node.initializer) {
+                    delete node.initializer;
+                }
             }
         });
         this.rawData = data;
-        this.modules = _.sortBy(this.rawData.modules, ['name']);
-        this.rawModulesForOverview = _.sortBy(data.modulesForGraph, ['name']);
-        this.rawModules = _.sortBy(data.modulesForGraph, ['name']);
-        this.components = _.sortBy(this.rawData.components, ['name']);
-        this.directives = _.sortBy(this.rawData.directives, ['name']);
-        this.injectables = _.sortBy(this.rawData.injectables, ['name']);
-        this.interceptors = _.sortBy(this.rawData.interceptors, ['name']);
-        this.guards = _.sortBy(this.rawData.guards, ['name']);
-        this.interfaces = _.sortBy(this.rawData.interfaces, ['name']);
-        this.pipes = _.sortBy(this.rawData.pipes, ['name']);
-        this.classes = _.sortBy(this.rawData.classes, ['name']);
+        this.modules = _.sortBy(this.rawData.modules, [el => el.name.toLowerCase()]);
+        this.rawModulesForOverview = _.sortBy(data.modulesForGraph, [el => el.name.toLowerCase()]);
+        this.rawModules = _.sortBy(data.modulesForGraph, [el => el.name.toLowerCase()]);
+        this.components = _.sortBy(this.rawData.components, [el => el.name.toLowerCase()]);
+        this.controllers = _.sortBy(this.rawData.controllers, [el => el.name.toLowerCase()]);
+        this.directives = _.sortBy(this.rawData.directives, [el => el.name.toLowerCase()]);
+        this.injectables = _.sortBy(this.rawData.injectables, [el => el.name.toLowerCase()]);
+        this.interceptors = _.sortBy(this.rawData.interceptors, [el => el.name.toLowerCase()]);
+        this.guards = _.sortBy(this.rawData.guards, [el => el.name.toLowerCase()]);
+        this.interfaces = _.sortBy(this.rawData.interfaces, [el => el.name.toLowerCase()]);
+        this.pipes = _.sortBy(this.rawData.pipes, [el => el.name.toLowerCase()]);
+        this.classes = _.sortBy(this.rawData.classes, [el => el.name.toLowerCase()]);
         this.miscellaneous = this.rawData.miscellaneous;
         this.prepareMiscellaneous();
         this.updateModulesDeclarationsExportsTypes();
@@ -147,16 +147,53 @@ export class DependenciesEngine {
             source: 'internal',
             data: undefined
         };
-        for (let i = 0; i < data.length; i++) {
-            if (typeof name !== 'undefined') {
-                if (typeof file !== 'undefined') {
-                    if (name.indexOf(data[i].name) !== -1 && file.replace(/\\/g, '/').indexOf(data[i].file) !== -1) {
-                        _result.data = data[i];
+        let nameFoundCounter = 0;
+        if (data && data.length > 0) {
+            for (let i = 0; i < data.length; i++) {
+                if (typeof name !== 'undefined') {
+                    if (typeof file !== 'undefined') {
+                        if (
+                            name.indexOf(data[i].name) !== -1 &&
+                            file.replace(/\\/g, '/').indexOf(data[i].file) !== -1
+                        ) {
+                            nameFoundCounter += 1;
+                            _result.data = data[i];
+                        }
+                    } else {
+                        if (name.indexOf(data[i].name) !== -1) {
+                            nameFoundCounter += 1;
+                            _result.data = data[i];
+                        }
                     }
-                } else {
-                    if (name.indexOf(data[i].name) !== -1) {
-                        _result.data = data[i];
+                }
+            }
+
+            // Prevent wrong matching like MultiSelectOptionDirective with SelectOptionDirective, or QueryParamGroupService with QueryParamGroup
+            if (nameFoundCounter > 1) {
+                let found = false;
+                for (let i = 0; i < data.length; i++) {
+                    if (typeof name !== 'undefined') {
+                        if (typeof file !== 'undefined') {
+                            if (
+                                name === data[i].name &&
+                                file.replace(/\\/g, '/').indexOf(data[i].file) !== -1
+                            ) {
+                                found = true;
+                                _result.data = data[i];
+                            }
+                        } else {
+                            if (name === data[i].name) {
+                                found = true;
+                                _result.data = data[i];
+                            }
+                        }
                     }
+                }
+                if (!found) {
+                    _result = {
+                        source: 'internal',
+                        data: undefined
+                    };
                 }
             }
         }
@@ -165,17 +202,16 @@ export class DependenciesEngine {
 
     private manageDuplicatesName() {
         let processDuplicates = (element, index, array) => {
-            let elementsWithSameName = _.filter(array, {name: element.name});
+            let elementsWithSameName = _.filter(array, { name: element.name });
             if (elementsWithSameName.length > 1) {
                 // First element is the reference for duplicates
                 for (let i = 1; i < elementsWithSameName.length; i++) {
                     let elementToEdit = elementsWithSameName[i];
-                    if (
-                        typeof elementToEdit.isDuplicate === 'undefined'
-                    ) {
+                    if (typeof elementToEdit.isDuplicate === 'undefined') {
                         elementToEdit.isDuplicate = true;
                         elementToEdit.duplicateId = i;
-                        elementToEdit.duplicateName = elementToEdit.name + '-' + elementToEdit.duplicateId;
+                        elementToEdit.duplicateName =
+                            elementToEdit.name + '-' + elementToEdit.duplicateId;
                         elementToEdit.id = elementToEdit.id + '-' + elementToEdit.duplicateId;
                     }
                 }
@@ -190,6 +226,7 @@ export class DependenciesEngine {
         this.guards = this.guards.map(processDuplicates);
         this.modules = this.modules.map(processDuplicates);
         this.components = this.components.map(processDuplicates);
+        this.controllers = this.controllers.map(processDuplicates);
         this.directives = this.directives.map(processDuplicates);
     }
 
@@ -201,11 +238,12 @@ export class DependenciesEngine {
             () => this.findInCompodocDependencies(name, this.interfaces),
             () => this.findInCompodocDependencies(name, this.classes),
             () => this.findInCompodocDependencies(name, this.components),
+            () => this.findInCompodocDependencies(name, this.controllers),
             () => this.findInCompodocDependencies(name, this.miscellaneous.variables),
             () => this.findInCompodocDependencies(name, this.miscellaneous.functions),
             () => this.findInCompodocDependencies(name, this.miscellaneous.typealiases),
             () => this.findInCompodocDependencies(name, this.miscellaneous.enumerations),
-            () => this.angularApiUtil.findApi(name)
+            () => AngularApiUtil.findApi(name)
         ];
 
         for (let searchFunction of searchFunctions) {
@@ -230,6 +268,12 @@ export class DependenciesEngine {
             _.forEach(updatedData.components, (component: IComponentDep) => {
                 let _index = _.findIndex(this.components, { name: component.name });
                 this.components[_index] = component;
+            });
+        }
+        if (updatedData.controllers.length > 0) {
+            _.forEach(updatedData.controllers, (controller: IControllerDep) => {
+                let _index = _.findIndex(this.controllers, { name: controller.name });
+                this.controllers[_index] = controller;
             });
         }
         if (updatedData.directives.length > 0) {
@@ -321,6 +365,7 @@ export class DependenciesEngine {
             [],
             this.modules,
             this.components,
+            this.controllers,
             this.directives,
             this.injectables,
             this.interceptors,
@@ -365,6 +410,10 @@ export class DependenciesEngine {
         return this.components;
     }
 
+    public getControllers() {
+        return this.controllers;
+    }
+
     public getDirectives() {
         return this.directives;
     }
@@ -401,3 +450,5 @@ export class DependenciesEngine {
         return this.miscellaneous;
     }
 }
+
+export default DependenciesEngine.getInstance();

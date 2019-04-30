@@ -1,3 +1,5 @@
+import { CoverageData } from './coverageData.interface';
+
 export interface MainDataInterface {
     output: string;
     theme: string;
@@ -10,6 +12,7 @@ export interface MainDataInterface {
     documentationMainDescription: string;
     base: string;
     hideGenerator: boolean;
+    hasFilesToCoverage: boolean;
     modules: any;
     readme: boolean;
     changelog: string;
@@ -22,6 +25,7 @@ export interface MainDataInterface {
     classes: any;
     interfaces: any;
     components: any;
+    controllers: any;
     directives: any;
     injectables: any;
     interceptors: any;
@@ -38,6 +42,7 @@ export interface MainDataInterface {
     disableSourceCode: boolean;
     disableDomTree: boolean;
     disableTemplateTab: boolean;
+    disableStyleTab: boolean;
     disableGraph: boolean;
     disableMainGraph: boolean;
     disableCoverage: boolean;
@@ -54,17 +59,20 @@ export interface MainDataInterface {
     coverageTestThresholdFail: boolean;
     coverageTestPerFile: boolean;
     coverageMinimumPerFile: number;
-		unitTestCoverage: string;
-		unitTestData: Object;
+    coverageTestShowOnlyFailed: boolean;
+    unitTestCoverage: string;
+    unitTestData: Object;
     routesLength: number;
     angularVersion: string;
     exportFormat: string;
-    coverageData: Object;
+    coverageData: CoverageData;
     customFavicon: string;
+    customLogo: string;
     packageDependencies: Object[];
     packagePeerDependencies: Object[];
     gaID: string;
     gaSite: string;
     angularProject: boolean;
     angularJSProject: boolean;
+    language: string;
 }
