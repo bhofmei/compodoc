@@ -1,12 +1,21 @@
 import * as semver from 'semver';
 import { IAngularApi } from './angular-api.util';
 
-
 export class AngularVersionUtil {
     private static readonly CorePackage = '@angular/core';
 
+    private static instance: AngularVersionUtil;
+    private constructor() {}
+    public static getInstance() {
+        if (!AngularVersionUtil.instance) {
+            AngularVersionUtil.instance = new AngularVersionUtil();
+        }
+        return AngularVersionUtil.instance;
+    }
+
     public cleanVersion(version: string): string {
-        return version.replace('~', '')
+        return version
+            .replace('~', '')
             .replace('^', '')
             .replace('=', '')
             .replace('<', '')
@@ -31,7 +40,7 @@ export class AngularVersionUtil {
 
         try {
             result = semver.compare(version, '2.4.10') <= 0;
-        } catch (e) { }
+        } catch (e) {}
 
         return result;
     }
@@ -45,3 +54,5 @@ export class AngularVersionUtil {
         return `https://${angularDocPrefix}angular.io/${api.path}`;
     }
 }
+
+export default AngularVersionUtil.getInstance();

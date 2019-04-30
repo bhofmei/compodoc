@@ -1,9 +1,9 @@
 import { IHtmlEngineHelper } from './html-engine-helper.interface';
 import { extractLeadingText, splitLinkText } from '../../../utils/link-parser';
-import { DependenciesEngine } from '../dependencies.engine';
+import DependenciesEngine from '../dependencies.engine';
 
 export class ParseDescriptionHelper implements IHtmlEngineHelper {
-    constructor(private dependenciesEngine: DependenciesEngine) {}
+    constructor() {}
 
     public helperFunc(context: any, description: string, depth: number) {
         let tagRegExpLight = new RegExp('\\{@link\\s+((?:.|\n)+?)\\}', 'i');
@@ -29,14 +29,17 @@ export class ParseDescriptionHelper implements IHtmlEngineHelper {
             split = splitLinkText(matchedTag.text);
 
             if (typeof split.linkText !== 'undefined') {
-                resultInCompodoc = this.dependenciesEngine.findInCompodoc(split.target);
+                resultInCompodoc = DependenciesEngine.findInCompodoc(split.target);
             } else {
                 let info = matchedTag.text;
                 if (matchedTag.text.indexOf('#') !== -1) {
-                    anchor = matchedTag.text.substr(matchedTag.text.indexOf('#'), matchedTag.text.length);
+                    anchor = matchedTag.text.substr(
+                        matchedTag.text.indexOf('#'),
+                        matchedTag.text.length
+                    );
                     info = matchedTag.text.substr(0, matchedTag.text.indexOf('#'));
                 }
-                resultInCompodoc = this.dependenciesEngine.findInCompodoc(info);
+                resultInCompodoc = DependenciesEngine.findInCompodoc(info);
             }
 
             if (resultInCompodoc) {
@@ -59,7 +62,7 @@ export class ParseDescriptionHelper implements IHtmlEngineHelper {
                     resultInCompodoc.type === 'miscellaneous' ||
                     (resultInCompodoc.ctype && resultInCompodoc.ctype === 'miscellaneous')
                 ) {
-                    resultInCompodoc.type = 'miscellaneou';
+                    resultInCompodoc.type = 'miscellaneou'; // Not a typo, it is for matching other single types : component, module etc
                     label = resultInCompodoc.name;
                     anchor = '#' + resultInCompodoc.name;
                     if (resultInCompodoc.subtype === 'enum') {
@@ -166,7 +169,9 @@ export class ParseDescriptionHelper implements IHtmlEngineHelper {
                     if (parsedATag && parsedATag.length === 2) {
                         let insideMarkedATag = parsedATag[1];
                         description = description.replace(
-                            `{@link <a href="${encodeURI(insideMarkedATag)}">${insideMarkedATag}</a>`,
+                            `{@link <a href="${encodeURI(
+                                insideMarkedATag
+                            )}">${insideMarkedATag}</a>`,
                             `{@link ${insideMarkedATag}`
                         );
                     }

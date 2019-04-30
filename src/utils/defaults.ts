@@ -6,7 +6,7 @@ export const COMPODOC_DEFAULTS = {
     port: 8080,
     theme: 'gitbook',
     exportFormat: 'html',
-    exportFormatsSupported: ['html', 'json'],
+    exportFormatsSupported: ['html', 'json', 'pdf'],
     base: '/',
     defaultCoverageThreshold: 70,
     defaultCoverageMinimumPerFile: 0,
@@ -16,6 +16,7 @@ export const COMPODOC_DEFAULTS = {
     disableSourceCode: false,
     disableDomTree: false,
     disableTemplateTab: false,
+    disableStyleTab: false,
     disableGraph: false,
     disableMainGraph: false,
     disableCoverage: false,
@@ -28,5 +29,7 @@ export const COMPODOC_DEFAULTS = {
         ROOT: 'root',
         INTERNAL: 'internal'
     },
-    gaSite: 'auto'
+    gaSite: 'auto',
+    coverageTestShowOnlyFailed: false,
+    language: 'en-US'
 };

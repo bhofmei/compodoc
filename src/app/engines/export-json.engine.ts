@@ -1,30 +1,36 @@
 import * as path from 'path';
 
-import { logger } from '../../logger';
-import { DependenciesEngine } from './dependencies.engine';
-import { ConfigurationInterface } from '../interfaces/configuration.interface';
-import { FileEngine } from './file.engine';
+import { logger } from '../../utils/logger';
+import DependenciesEngine from './dependencies.engine';
 
 import { ExportData } from '../interfaces/export-data.interface';
 
 import { AngularNgModuleNode } from '../nodes/angular-ngmodule-node';
+import FileEngine from './file.engine';
 
 const traverse = require('traverse');
 
 export class ExportJsonEngine {
-    constructor(
-        private configuration: ConfigurationInterface,
-        private dependenciesEngine: DependenciesEngine,
-        private fileEngine: FileEngine = new FileEngine()
-    ) {}
+    private static instance: ExportJsonEngine;
+    private constructor() {}
+    public static getInstance() {
+        if (!ExportJsonEngine.instance) {
+            ExportJsonEngine.instance = new ExportJsonEngine();
+        }
+        return ExportJsonEngine.instance;
+    }
 
-    export(outputFolder, data) {
+    public export(outputFolder, data) {
         let exportData: ExportData = {};
 
         traverse(data).forEach(function(node) {
             if (node) {
-                if (node.parent) delete node.parent;
-                if (node.initializer) delete node.initializer;
+                if (node.parent) {
+                    delete node.parent;
+                }
+                if (node.initializer) {
+                    delete node.initializer;
+                }
             }
         });
 
@@ -39,19 +45,17 @@ export class ExportJsonEngine {
         exportData.routes = data.routes;
         exportData.coverage = data.coverageData;
 
-        return this.fileEngine
-            .write(
-                outputFolder + path.sep + '/documentation.json',
-                JSON.stringify(exportData, null, 4)
-            )
-            .catch(err => {
-                logger.error('Error during export file generation ', err);
-                return Promise.reject(err);
-            });
+        return FileEngine.write(
+            outputFolder + path.sep + '/documentation.json',
+            JSON.stringify(exportData, undefined, 4)
+        ).catch(err => {
+            logger.error('Error during export file generation ', err);
+            return Promise.reject(err);
+        });
     }
 
-    processModules() {
-        const modules: AngularNgModuleNode[] = this.dependenciesEngine.getModules();
+    public processModules() {
+        const modules: AngularNgModuleNode[] = DependenciesEngine.getModules();
 
         let _resultedModules = [];
 
@@ -123,3 +127,5 @@ export class ExportJsonEngine {
         return _resultedModules;
     }
 }
+
+export default ExportJsonEngine.getInstance();

@@ -1,11 +1,11 @@
 <ol class="breadcrumb">
-  <li>Miscellaneous</li>
-  <li>Type aliases</li>
+  <li>{{t "miscellaneous" }}</li>
+  <li>{{t "type-aliases" }}</li>
 </ol>
 
 {{> index-misc list=miscellaneous.typealiases}}
 
 {{#each miscellaneous.groupedTypeAliases}}
     <h3>{{@key}}</h3>
-    {{> block-typealias typealias=this title='false'}}
+    {{> block-typealias typealias=this title='false' depth=../depth}}
 {{/each}}

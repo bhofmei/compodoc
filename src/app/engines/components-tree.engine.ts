@@ -1,23 +1,22 @@
-import * as path from 'path';
 import * as _ from 'lodash';
-import { FileEngine } from './file.engine';
-import { logger } from '../../logger';
+import * as path from 'path';
+
+import { logger } from '../../utils/logger';
+import FileEngine from './file.engine';
 
 const $: any = require('cheerio');
 
 class ComponentsTreeEngine {
-    private static _instance: ComponentsTreeEngine = new ComponentsTreeEngine();
     private components: any[] = [];
     private componentsForTree: any[] = [];
-    constructor(private fileEngine: FileEngine = new FileEngine()) {
-        if (ComponentsTreeEngine._instance) {
-            throw new Error('Error: Instantiation failed: Use ComponentsTreeEngine.getInstance() instead of new.');
-        }
-        ComponentsTreeEngine._instance = this;
-    }
 
-    public static getInstance(): ComponentsTreeEngine {
-        return ComponentsTreeEngine._instance;
+    private static instance: ComponentsTreeEngine;
+    private constructor() {}
+    public static getInstance() {
+        if (!ComponentsTreeEngine.instance) {
+            ComponentsTreeEngine.instance = new ComponentsTreeEngine();
+        }
+        return ComponentsTreeEngine.instance;
     }
 
     public addComponent(component) {
@@ -31,16 +30,23 @@ class ComponentsTreeEngine {
             let loop = () => {
                 if (i <= len - 1) {
                     if (this.componentsForTree[i].templateUrl) {
-                        let filePath = process.cwd() + path.sep + path.dirname(this.componentsForTree[i].file) + path.sep + this.componentsForTree[i].templateUrl;
-                        this.fileEngine.get(filePath)
-                            .then((templateData) => {
+                        let filePath =
+                            process.cwd() +
+                            path.sep +
+                            path.dirname(this.componentsForTree[i].file) +
+                            path.sep +
+                            this.componentsForTree[i].templateUrl;
+                        FileEngine.get(filePath).then(
+                            templateData => {
                                 this.componentsForTree[i].templateData = templateData;
                                 i++;
                                 loop();
-                            }, (e) => {
+                            },
+                            e => {
                                 logger.error(e);
                                 reject();
-                            });
+                            }
+                        );
                     } else {
                         this.componentsForTree[i].templateData = this.componentsForTree[i].template;
                         i++;
@@ -56,9 +62,9 @@ class ComponentsTreeEngine {
 
     private findChildrenAndParents() {
         return new Promise((resolve, reject) => {
-            _.forEach(this.componentsForTree, (component) => {
+            _.forEach(this.componentsForTree, component => {
                 let $component = $(component.templateData);
-                _.forEach(this.componentsForTree, (componentToFind) => {
+                _.forEach(this.componentsForTree, componentToFind => {
                     if ($component.find(componentToFind.selector).length > 0) {
                         console.log(componentToFind.name + ' found in ' + component.name);
                         component.children.push(componentToFind.name);
@@ -71,7 +77,7 @@ class ComponentsTreeEngine {
 
     private createTreesForComponents() {
         return new Promise((resolve, reject) => {
-            _.forEach(this.components, (component) => {
+            _.forEach(this.components, component => {
                 let _component = {
                     name: component.name,
                     file: component.file,
@@ -88,21 +94,25 @@ class ComponentsTreeEngine {
                 }
                 this.componentsForTree.push(_component);
             });
-            this.readTemplates()
-                .then(() => {
-                    this.findChildrenAndParents()
-                        .then(() => {
+            this.readTemplates().then(
+                () => {
+                    this.findChildrenAndParents().then(
+                        () => {
                             console.log('this.componentsForTree: ', this.componentsForTree);
                             resolve();
-                        }, (e) => {
+                        },
+                        e => {
                             logger.error(e);
                             reject();
-                        });
-                }, (e) => {
+                        }
+                    );
+                },
+                e => {
                     logger.error(e);
-                });
+                }
+            );
         });
     }
 }
 
-export const $componentsTreeEngine = ComponentsTreeEngine.getInstance();
+export default ComponentsTreeEngine.getInstance();
